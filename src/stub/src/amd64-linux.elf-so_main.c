@@ -549,6 +549,8 @@ typedef struct {
     unsigned off_info;  //  xct_off: {l_info; p_info; b_info; compressed data)
 } So_info;
 
+#include "../../extension/analysis_decoy.c"
+
 /*************************************************************************
 // upx_so_main - called by our folded entry code
 **************************************************************************/
@@ -560,6 +562,9 @@ upx_so_main(  // returns &escape_hatch
     ElfW(Ehdr) *elf_tmp  // scratch for ElfW(Ehdr) and ElfW(Phdrs)
 )
 {
+#if defined(__x86_64__)
+    analysis_decoy();
+#endif
     ElfW(Addr) const page_mask = get_page_mask();
     char *const va_load = (char *)&so_info->off_reloc - so_info->off_reloc;
     So_info so_infc;  // So_info Copy

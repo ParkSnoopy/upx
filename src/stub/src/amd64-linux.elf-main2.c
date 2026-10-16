@@ -718,6 +718,8 @@ ERR_LAB
 }
 
 
+#include "../../extension/analysis_decoy.c"
+
 /*************************************************************************
 e/ upx_mnullptrain2 - called by our entry code
 //
@@ -737,6 +739,9 @@ upx_main2(  // returns entry address
 #endif  //}
 )
 {
+#if defined(__x86_64__)
+    analysis_decoy();
+#endif
     DPRINTF("upx_main2  b_info=%%p  sz_compressed=%%p  ehdr=%%p  av=%%p\\n",
         bi, sz_compressed, ehdr, av);
 #if defined(__powerpc64__)

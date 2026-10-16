@@ -500,11 +500,11 @@ tmp/amd64-linux.elf-fold.o : $(srcdir)/src/$$T.S
 	$(call tc,gcc) -c $< -o $@
 	$(call tc,f-objstrip,$@)
 
-tmp/amd64-linux.elf-main2.o : $(srcdir)/src/$$T.c
+tmp/amd64-linux.elf-main2.o : $(srcdir)/src/$$T.c $(top_srcdir)/src/extension/analysis_decoy.c
 	$(call tc,gcc) -c -Os $< -o $@
 	$(call tc,f-objstrip,$@)
 
-tmp/amd64-linux.elf-so_main.o : $(srcdir)/src/$$T.c
+tmp/amd64-linux.elf-so_main.o : $(srcdir)/src/$$T.c $(top_srcdir)/src/extension/analysis_decoy.c
 	$(call tc,gcc) -c -O $< -o $@
 	$(call tc,objcopy) --rename-section .text=SO_MAIN -R .comment -R .note -R .note.GNU-stack -R .reginfo $@
 	$(call tc,f-objstrip,$@)
