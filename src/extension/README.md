@@ -43,6 +43,7 @@ Other architectures and EFI images are rejected.
 
 The scramble uses a nonzero byte key derived from the block sizes.  
 Linux stored blocks use block method 15, which stock UPX rejects as a corrupt `b_info`.  
+If an ELF shared library's stored payload would overlap a writable segment, an additional load mapping holds the payload and a relocated program-header table.  
 Loader-required metadata remains readable, including shared-library relocation inputs and Windows import, export, and TLS tables.  
 The runtime stub and `upx -d` reverse the scramble.  
 Opaque mode is reversible scrambling, not encryption.  
@@ -54,7 +55,7 @@ The synthetic-name tests run serially because their names are visible to other t
 
 [Opaque integration tests](opaque/tests.cmake) compare normal and opaque packing with NRV2B, NRV2D, NRV2E, and LZMA.  
 They check executable startup, repeated library loading, exports, initialization, TLS, relocated data, packed executable/library composition, and `upx -t` integrity.  
-Linux tests also cover eager and lazy loading and byte-identical recovery of the original input.  
+Linux tests also cover eager and lazy loading, tight load-segment layouts without build-ID notes, and byte-identical recovery of the original input.  
 Windows recovery is compared byte-for-byte with normal UPX recovery, which retains existing PE header normalization.  
 
 The [Opaque Runtime Tests workflow](../../.github/workflows/opaque.yml) runs these tests and existing regressions on native Linux and Windows runners for pushes to `devel`.  
