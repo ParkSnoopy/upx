@@ -31,6 +31,9 @@
 
 
 #include "include/linux.h"
+#if defined(__x86_64__)
+#include "../../extension/opaque_store.h"
+#endif
 
 // Pprotect is mprotect, but page-aligned on the lo end (Linux requirement)
 extern unsigned Pprotect(void *, size_t, unsigned);
@@ -225,6 +228,10 @@ ERR_LAB
             DPRINTF("  copy %%p  %%p  %%p\\n", xi->buf, xo->buf, h.sz_cpr);
             xi->size += sizeof(h);  // xread(xi, &h, sizeof(h)) was a peek
             xread(xi, xo->buf, h.sz_cpr);
+#if defined(__x86_64__)
+            if (h.b_method == OPAQUE_B_METHOD)
+                opaque_xor((unsigned char *)xo->buf, h.sz_cpr, h.sz_unc, h.sz_cpr);
+#endif
         }
         xo->buf  += h.sz_unc;
         xo->size -= h.sz_unc;

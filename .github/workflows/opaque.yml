@@ -1,0 +1,56 @@
+name: Opaque Runtime Tests
+
+on:
+  push:
+    branches: [devel]
+
+permissions:
+  contents: read
+
+jobs:
+  native-tests:
+    name: Opaque Runtime (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            cc: gcc
+            cxx: g++
+          - os: windows-latest
+            cc: cl
+            cxx: cl
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: actions/checkout@v6 - Check Out Source
+        uses: actions/checkout@v6
+        with:
+          token: ${{ github.token }}
+          submodules: recursive
+          persist-credentials: false
+      - name: ilammy/msvc-dev-cmd@v1 - Initialize x64 Compiler
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: bash - Configure Native Tests
+        run: >-
+          cmake -S . -B build/opaque -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DUPX_CONFIG_DISABLE_WERROR=OFF
+          -DUPX_CONFIG_DISABLE_WSTRICT=OFF
+          -DUPX_CONFIG_DISABLE_SANITIZE=ON
+          -DUPX_CONFIG_DISABLE_EXHAUSTIVE_TESTS=ON
+      - name: bash - Build Packer and Fixtures
+        run: cmake --build build/opaque --parallel 2
+      - name: bash - Verify Opaque Startup, Loading, and Recovery
+        run: ctest --test-dir build/opaque -R '^upx-opaque-' --output-on-failure --no-tests=error --parallel 2
+      - name: bash - Run Existing Regressions
+        run: ctest --test-dir build/opaque -E '^upx-opaque-' --output-on-failure --no-tests=error --parallel 2

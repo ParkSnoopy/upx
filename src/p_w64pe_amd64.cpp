@@ -39,6 +39,7 @@
 #define WANT_EHDR_ENUM 1
 #include "p_elf_enum.h"
 #include "linker.h"
+#include "extension/opaque_store.h"
 
 static const CLANG_FORMAT_DUMMY_STATEMENT
 #include "stub/amd64-win64.pe.h"
@@ -100,7 +101,8 @@ void PackW64PeAmd64::buildLoader(const Filter *ft) {
 
               // LZMA_ELF00 has inner "enter" (push rbp; mov rsp,rbp)
               // LZMA_TAIL  has inner 'leave' (mov rbp,rsp; pop rbp)
-              M_IS_LZMA(ph.method) ? "LZMA_HEAD,LZMA_ELF00,LZMA_DEC20,LZMA_TAIL"
+              ph.opaque              ? "PEOPAQUE"
+              : M_IS_LZMA(ph.method) ? "LZMA_HEAD,LZMA_ELF00,LZMA_DEC20,LZMA_TAIL"
 
               : M_IS_NRV2B(ph.method) ? "NRV_HEAD,NRV2B"
               : M_IS_NRV2D(ph.method) ? "NRV_HEAD,NRV2D"
@@ -233,6 +235,10 @@ void PackW64PeAmd64::defineSymbols(unsigned ncsection, unsigned upxsection, unsi
     const unsigned esi0 = s1addr + ic;
     linker->defineSymbol("start_of_uncompressed", 0u - esi0 + rvamin);
     linker->defineSymbol("start_of_compressed", esi0);
+    if (ph.opaque) {
+        linker->defineSymbol("opaque_length", ph.c_len);
+        linker->defineSymbol("opaque_key", opaque_key(ph.u_len, ph.c_len) & 0xff);
+    }
 
     if (use_tls_callbacks) {
         linker->defineSymbol("tls_callbacks_ptr", tlscb_ptr - ih.imagebase);
@@ -249,6 +255,8 @@ void PackW64PeAmd64::setOhHeaderSize(const pe_section_t *osection) {
 }
 
 void PackW64PeAmd64::pack(OutputFile *fo) {
+    if (ph.opaque && isefi)
+        throwCantPack("--opaque does not support EFI images");
     unsigned mask = (1u << IMAGE_SUBSYSTEM_WINDOWS_GUI) | (1u << IMAGE_SUBSYSTEM_WINDOWS_CUI) |
                     (1u << IMAGE_SUBSYSTEM_EFI_APPLICATION) |
                     (1u << IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER) |

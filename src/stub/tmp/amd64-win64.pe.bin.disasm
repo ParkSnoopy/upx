@@ -58,6 +58,21 @@ Disassembly of section PETLSHAK:
                         b: R_X86_64_32  tls_value+0x80000000
    f:   50                      push   rax
 
+Disassembly of section PEOPAQUE:
+
+0000000000000000 <PEOPAQUE>:
+   0:   b9 00 00 00 80          mov    ecx,0x80000000
+                        1: R_X86_64_32  opaque_length+0x80000000
+   5:   b2 00                   mov    dl,0x0
+                        6: R_X86_64_8   opaque_key
+   7:   8a 06                   mov    al,BYTE PTR [rsi]
+   9:   30 d0                   xor    al,dl
+   b:   88 07                   mov    BYTE PTR [rdi],al
+   d:   48 ff c6                inc    rsi
+  10:   48 ff c7                inc    rdi
+  13:   ff c9                   dec    ecx
+  15:   75 f0                   jne    7 <PEOPAQUE+0x7>
+
 Disassembly of section PEMAIN02:
 
 0000000000000000 <PEMAIN02>:

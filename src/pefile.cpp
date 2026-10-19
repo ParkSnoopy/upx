@@ -31,6 +31,7 @@
 #include "packer.h"
 #include "pefile.h"
 #include "linker.h"
+#include "extension/opaque_store.h"
 
 #define FILLVAL 0
 
@@ -2525,7 +2526,18 @@ void PeFile::pack0(OutputFile *fo, ht &ih, ht &oh, unsigned subsystem_mask,
         filter_strategy = -3;
     }
 
-    callCompressWithFilters(ft, filter_strategy, ih.codebase);
+    if (ph.opaque) {
+        ft.id = ft.cto = 0;
+        ph.filter = ph.filter_cto = 0;
+        ph.c_len = ph.u_len;
+        ph.overlap_overhead = ih.objectalign;
+        memcpy(obuf, ibuf + rvamin, ph.u_len);
+        ph.u_adler = upx_adler32(obuf, ph.u_len, ph.saved_u_adler);
+        opaque_xor(obuf, ph.c_len, ph.u_len, ph.c_len);
+        ph.c_adler = upx_adler32(obuf, ph.c_len, ph.saved_c_adler);
+        buildLoader(&ft);
+    } else
+        callCompressWithFilters(ft, filter_strategy, ih.codebase);
     // info: see buildLoader()
     newvsize = (ph.u_len + rvamin + ph.overlap_overhead + oam1) & ~oam1;
     // but keep PETLSHAK for DLLs: the loader sets the tls index after
@@ -2822,13 +2834,16 @@ void PeFile::pack0(OutputFile *fo, ht &ih, ht &oh, unsigned subsystem_mask,
 #endif
 
     // verify
-    verifyOverlappingDecompression();
+    if (ph.opaque)
+        decompress(obuf, obuf);
+    else
+        verifyOverlappingDecompression();
 
     // copy the overlay
     copyOverlay(fo, overlay, obuf);
 
     // finally check the compression ratio
-    if (!checkFinalCompressionRatio(fo))
+    if (!ph.opaque && !checkFinalCompressionRatio(fo))
         throwNotCompressible();
 }
 

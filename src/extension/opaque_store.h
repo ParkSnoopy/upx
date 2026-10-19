@@ -1,4 +1,4 @@
-/* Shared by the packer/unpacker and the Linux x86-64 executable stub. */
+/* Shared by the packer/unpacker and the Linux x86-64 runtime stubs. */
 
 #ifndef UPX_EXTENSION_OPAQUE_STORE_H
 #define UPX_EXTENSION_OPAQUE_STORE_H

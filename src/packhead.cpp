@@ -29,6 +29,7 @@
 #include "packhead.h"
 #include "filter.h" // for ft->unfilter()
 #include "packer.h" // for Packer::isValidFormat
+#include "extension/opaque_store.h"
 
 /*************************************************************************
 // PackHeader
@@ -341,7 +342,15 @@ void ph_decompress(PackHeader &ph, SPAN_P(const byte) in, SPAN_P(byte) out, bool
     if (ph.u_len < ph.c_len)
         throwCantUnpack("header corrupted");
     unsigned new_len = ph.u_len;
-    int r = upx_decompress(raw_bytes(in, ph.c_len), ph.c_len, raw_bytes(out, ph.u_len), &new_len,
+    int r;
+    if (ph.opaque && ph.format == UPX_F_W64PE_AMD64) {
+        if (ph.c_len != ph.u_len)
+            throwCantUnpack("invalid opaque payload size");
+        memmove(raw_bytes(out, ph.u_len), raw_bytes(in, ph.c_len), ph.u_len);
+        opaque_xor(raw_bytes(out, ph.u_len), ph.u_len, ph.u_len, ph.c_len);
+        r = UPX_E_OK;
+    } else
+        r = upx_decompress(raw_bytes(in, ph.c_len), ph.c_len, raw_bytes(out, ph.u_len), &new_len,
                            ph_forced_method(ph.method), &ph.compress_result);
     if (r == UPX_E_OUT_OF_MEMORY)
         throwOutOfMemoryException();

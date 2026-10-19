@@ -6021,8 +6021,6 @@ int PackLinuxElf64::pack2(OutputFile *fo, Filter &ft)
     //is_asl = (!!saved_opt_android_shlib) << 1;  // bit 1; see is_shlib
     is_asl = 0;
     unsigned const is_shlib = (0!=xct_off) | is_asl;
-    if (opt->o_unix.opaque && is_shlib)
-        throwCantPack("--opaque supports only Linux x86-64 executables");
     unsigned pre_xct_top = 0;  // offset of end of PT_LOAD _before_ xct_off
 
     if (Elf64_Ehdr::EM_ARM==get_te16(&ehdri.e_machine)) {

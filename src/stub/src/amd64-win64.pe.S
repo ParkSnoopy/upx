@@ -112,6 +112,18 @@ section         PETLSHAK
                 mov     [rax],  IMM32(tls_value) // restore compressed data overwritten by the TLS index
                 push    rax
 
+section         PEOPAQUE
+                mov     ecx, IMM32(opaque_length)
+                mov     dl, IMM8(opaque_key)
+opaque_loop:
+                mov     al, byte ptr [rsi]
+                xor     al, dl
+                mov     byte ptr [rdi], al
+                inc     rsi
+                inc     rdi
+                dec     ecx
+                jnz     opaque_loop
+
 section         PEMAIN02
                 push    rdi
 section         PEMAIN03

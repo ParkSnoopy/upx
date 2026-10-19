@@ -506,8 +506,9 @@ void Packer::updatePackHeader() {
     assert(opt->cmd == CMD_COMPRESS);
     //
     const int *m = getCompressionMethods(opt->method, opt->level);
-    if (opt->o_unix.opaque && ph.format != UPX_F_LINUX_ELF64_AMD64)
-        throwCantPack("--opaque supports only Linux x86-64 executables");
+    if (opt->o_unix.opaque && ph.format != UPX_F_LINUX_ELF64_AMD64 &&
+        ph.format != UPX_F_W64PE_AMD64)
+        throwCantPack("--opaque supports only Linux and Windows x86-64 executables and libraries");
     ph.method = m[0];
     ph.level = opt->level;
     ph.opaque = opt->o_unix.opaque;
