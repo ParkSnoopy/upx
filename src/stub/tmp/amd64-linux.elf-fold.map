@@ -90,6 +90,6 @@ EXP_TAIL        0x0000000000000000       0x14
  EXP_TAIL       0x0000000000000000       0x14 tmp/amd64-expand.o
                 0x0000000000000014                upx_mmap_and_fd
 
-STRCON          0x0000000000000000       0xf7
- STRCON         0x0000000000000000       0x4b tmp/amd64-linux.elf-upxfd_linux.o
- STRCON         0x000000000000004b       0xac tmp/amd64-linux.elf-main2.o
+STRCON          0x0000000000000000       0xf1
+ STRCON         0x0000000000000000       0x48 tmp/amd64-linux.elf-upxfd_linux.o
+ STRCON         0x0000000000000048       0xa9 tmp/amd64-linux.elf-main2.o

@@ -1433,10 +1433,9 @@ Disassembly of section PETLSC2:
 Disassembly of section UPX1HEAD:
 
 0000000000000000 <UPX1HEAD>:
-   0:   55                      push   rbp
-   1:   50                      push   rax
-   2:   58                      pop    rax
-   3:   21 a1 d8 d0 d5 00       and    DWORD PTR [rcx+0xd5d0d8],esp
+   0:   91                      xchg   ecx,eax
+   1:   a2 e4 b6 65 d8 c3 79    movabs ds:0x79c3d865b6e4,al
+   8:   00 00
         ...
-  1d:   00 00                   add    BYTE PTR [rax],al
-  1f:   2d                      .byte 0x2d
+  1e:   00                      .byte 0x0
+  1f:   83                      .byte 0x83
