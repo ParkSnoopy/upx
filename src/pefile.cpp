@@ -769,8 +769,10 @@ class PeFile::ImportLinker final : public ElfLinkerAMD64 {
         TStr dll_name(name_for_dll(dll, first_char));
         char *const new_name = New(char, new_size);
         SPAN_S_VAR(char, const name, new_name, new_size);
-        upx_safe_snprintf(new_name, new_size, "%s%c", (const char *) dll_name, separator);
-        encode_name(proc, name + strlen(name));
+        const int len = upx_safe_snprintf(new_name, new_size, "%s%c", (const char *) dll_name,
+                                          separator);
+        assert(len >= 0 && (unsigned) len < new_size);
+        encode_name(proc, name + len);
         return new_name;
     }
 

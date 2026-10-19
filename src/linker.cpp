@@ -120,6 +120,7 @@ ElfLinker::~ElfLinker() noexcept {
 }
 
 void ElfLinker::init(unsigned arch, const void *pdata_v, int plen, unsigned pxtra) {
+    assert(plen >= 0 && plen < INT_MAX);
     const byte *pdata = (const byte *) pdata_v;
     this->e_machine = arch;
     if (plen >= 16 && memcmp(pdata, "UPX#", 4) == 0) {
@@ -140,6 +141,7 @@ void ElfLinker::init(unsigned arch, const void *pdata_v, int plen, unsigned pxtr
             assert(14 + c_len == (unsigned) plen);
         }
         assert((unsigned) plen < u_len);
+        assert(u_len < INT_MAX);
         inputlen = u_len;
         input = New(byte, inputlen + 1);
         unsigned new_len = u_len;
