@@ -6,7 +6,7 @@
 
 name: CI
 
-on: [push, workflow_dispatch]
+on: [pull_request, push, workflow_dispatch]
 
 defaults: { run: { shell: bash } }
 
@@ -55,6 +55,7 @@ jobs:
       - run: dpkg -l
       - name: ${{ format('Check out {0} source code', github.ref_name) }}
         run: |
+          set -x
           git config --global --add safe.directory '*' # needed when running in a container
           git clone --branch "$GITHUB_REF_NAME" --depth 1 "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" .
           git submodule update --init
@@ -118,6 +119,7 @@ jobs:
       - name: ${{ format('Install packages {0}', matrix.container) }}
         shell: sh
         run: apk update && apk upgrade && apk add bash clang clang-dev cmake coreutils file g++ git make parallel tar util-linux zstd
+      - run: set -x; cat /etc/alpine-release || true
       - name: ${{ format('Check out {0} source code', github.ref_name) }}
         run: |
           git config --global --add safe.directory '*' # needed when running in a container
