@@ -31,7 +31,7 @@
 #include "packer.h"
 #include "pefile.h"
 #include "linker.h"
-#include "extension/opaque_store.h"
+#include "extension/opaque/opaque_store.h"
 
 #define FILLVAL 0
 

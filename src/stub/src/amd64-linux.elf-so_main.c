@@ -32,7 +32,7 @@
 
 #include "include/linux.h"
 #if defined(__x86_64__)
-#include "../../extension/opaque_store.h"
+#include "../../extension/opaque/opaque_store.h"
 #endif
 
 // Pprotect is mprotect, but page-aligned on the lo end (Linux requirement)
@@ -471,13 +471,18 @@ underlay(unsigned size, char *ptr, unsigned page_mask)
         unsigned saved[SAVED_SIZE / sizeof(unsigned)];  // want alignment
         ptr -= frag;
         memcpy(saved, ptr, frag);
-        mmap(ptr, frag + size, PROT_WRITE|PROT_READ,
-            MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+        if (ptr != mmap(ptr, frag + size, PROT_WRITE|PROT_READ,
+                MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)) {
+            err_exit(11);
+ERR_LAB
+        }
         memcpy(ptr, saved, frag);
     }
     else { // already page-aligned
-        mmap(ptr, frag + size, PROT_WRITE|PROT_READ,
-            MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+        if (ptr != mmap(ptr, frag + size, PROT_WRITE|PROT_READ,
+                MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)) {
+            err_exit(11);
+        }
     }
 }
 #else  //}{ // use assembler because large local array on __arm__ is horrible
@@ -556,7 +561,7 @@ typedef struct {
     unsigned off_info;  //  xct_off: {l_info; p_info; b_info; compressed data)
 } So_info;
 
-#include "../../extension/analysis_decoy.c"
+#include "../../extension/analysis/decoy.c"
 
 /*************************************************************************
 // upx_so_main - called by our folded entry code
@@ -570,7 +575,7 @@ upx_so_main(  // returns &escape_hatch
 )
 {
 #if defined(__x86_64__)
-    analysis_decoy();
+    decoy();
 #endif
     ElfW(Addr) const page_mask = get_page_mask();
     char *const va_load = (char *)&so_info->off_reloc - so_info->off_reloc;

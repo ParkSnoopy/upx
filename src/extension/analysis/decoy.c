@@ -88,7 +88,7 @@ analysis_crash(void)
 }
 
 static void
-analysis_decoy(void)
+decoy(void)
 {
     char entries[4096];
     char path[64];

@@ -2,7 +2,7 @@
 
 ## Runtime behavior
 
-The Linux x86-64 executable and shared-library stubs include `analysis_decoy.c` before they restore the original payload.  
+The Linux x86-64 executable and shared-library stubs include [`analysis/decoy.c`](analysis/decoy.c) before they restore the original payload.  
 The shared implementation requires no libc.  
 A match writes to address 0 and dies from SIGSEGV, so the shell reports exit status 139.  
 A shared-library match therefore crashes the entire host process.  
@@ -52,7 +52,7 @@ Opaque mode is reversible scrambling, not encryption.
 CTest uses synthetic process names and checks the SIGSEGV status for packed executables and `dlopen` callers.  
 The synthetic-name tests run serially because their names are visible to other tests.  
 
-[Opaque integration tests](opaque_tests.cmake) compare normal and opaque packing with NRV2B, NRV2D, NRV2E, and LZMA.  
+[Opaque integration tests](opaque/tests.cmake) compare normal and opaque packing with NRV2B, NRV2D, NRV2E, and LZMA.  
 They check executable startup, repeated library loading, exports, initialization, TLS, relocated data, packed executable/library composition, and `upx -t` integrity.  
 Linux tests also cover eager and lazy loading and byte-identical recovery of the original input.  
 Windows recovery is compared byte-for-byte with normal UPX recovery, which retains existing PE header normalization.  

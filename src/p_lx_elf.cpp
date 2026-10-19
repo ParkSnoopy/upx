@@ -41,7 +41,7 @@
 #include "p_unix.h"
 #include "p_lx_exc.h"
 #include "p_lx_elf.h"
-#include "extension/opaque_store.h"
+#include "extension/opaque/opaque_store.h"
 #include "ui.h"
 
 // NOLINTBEGIN(clang-analyzer-core.CallAndMessage)

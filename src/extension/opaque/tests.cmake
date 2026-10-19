@@ -4,7 +4,7 @@ if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Linux|Windows)$" OR
     return()
 endif()
 
-set(opaque_fixture_source "${CMAKE_CURRENT_SOURCE_DIR}/src/extension/opaque_test.c")
+set(opaque_fixture_source "${CMAKE_CURRENT_LIST_DIR}/opaque_test.c")
 add_executable(upx_opaque_test "${opaque_fixture_source}")
 target_compile_features(upx_opaque_test PRIVATE c_std_11)
 target_link_libraries(upx_opaque_test PRIVATE ${CMAKE_DL_LIBS})

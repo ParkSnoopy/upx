@@ -39,7 +39,7 @@
 #define WANT_EHDR_ENUM 1
 #include "p_elf_enum.h"
 #include "linker.h"
-#include "extension/opaque_store.h"
+#include "extension/opaque/opaque_store.h"
 
 static const CLANG_FORMAT_DUMMY_STATEMENT
 #include "stub/amd64-win64.pe.h"

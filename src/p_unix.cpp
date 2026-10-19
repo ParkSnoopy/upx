@@ -37,7 +37,7 @@
 #include "packer.h"
 #include "p_unix.h"
 #include "p_elf.h"
-#include "extension/opaque_store.h"
+#include "extension/opaque/opaque_store.h"
 
 // do not change
 #define BLOCKSIZE       (512*1024)

@@ -41,7 +41,7 @@ extern int upxfd_create(char const *tag, unsigned flags);
 #define MS_SYNC 4
 #define nullptr 0
 
-#include "../../extension/opaque_store.h"
+#include "../../extension/opaque/opaque_store.h"
 
 extern void *memcpy(void *dst, void const *src, size_t n);
 // Pprotect is mprotect but uses page-aligned address (Linux requirement)
@@ -476,8 +476,11 @@ underlay(unsigned size, char *ptr, unsigned len)  // len <= PAGE_SIZE
     DPRINTF("underlay size=%%u  ptr=%%p  len=%%u\\n", size, ptr, len);
     unsigned saved[4096/sizeof(unsigned)];
     memcpy(saved, ptr, len);
-    mmap(ptr, size, PROT_WRITE|PROT_READ,
-        MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+    if (ptr != mmap(ptr, size, PROT_WRITE|PROT_READ,
+            MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)) {
+        err_exit(11);
+ERR_LAB
+    }
     memcpy(ptr, saved, len);
 }
 
@@ -578,8 +581,11 @@ do_xmap( // mapped addr
         }
         // paranoia: prevent "hangover" from VMA for C_BASE
         //     munmap((void *)(reloc + phdr0->p_vaddr), phdr0->p_memsz);
-        mmap_privanon((void *)(reloc + phdr0->p_vaddr), phdr0->p_memsz,
-            PROT_READ|PROT_WRITE, MAP_FIXED);
+        void *const addr = (void *)(reloc + phdr0->p_vaddr);
+        if (addr != mmap_privanon(addr, phdr0->p_memsz,
+                PROT_READ|PROT_WRITE, MAP_FIXED)) {
+            err_exit(11);
+        }
     }
     else { // PT_INTERP; 'base' not used
         DPRINTF("INTERP\\n", 0);
@@ -722,7 +728,7 @@ ERR_LAB
 }
 
 
-#include "../../extension/analysis_decoy.c"
+#include "../../extension/analysis/decoy.c"
 
 /*************************************************************************
 e/ upx_mnullptrain2 - called by our entry code
@@ -744,7 +750,7 @@ upx_main2(  // returns entry address
 )
 {
 #if defined(__x86_64__)
-    analysis_decoy();
+    decoy();
 #endif
     DPRINTF("upx_main2  b_info=%%p  sz_compressed=%%p  ehdr=%%p  av=%%p\\n",
         bi, sz_compressed, ehdr, av);

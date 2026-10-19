@@ -29,7 +29,7 @@
 #include "packhead.h"
 #include "filter.h" // for ft->unfilter()
 #include "packer.h" // for Packer::isValidFormat
-#include "extension/opaque_store.h"
+#include "extension/opaque/opaque_store.h"
 
 /*************************************************************************
 // PackHeader

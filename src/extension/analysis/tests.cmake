@@ -1,12 +1,10 @@
-include("${CMAKE_CURRENT_SOURCE_DIR}/src/extension/opaque_tests.cmake")
-
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux" OR
    NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$" OR
    NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     return()
 endif()
 
-set(extension_fixture_source "${CMAKE_CURRENT_SOURCE_DIR}/src/extension/analysis_decoy_test.c")
+set(extension_fixture_source "${CMAKE_CURRENT_LIST_DIR}/decoy_test.c")
 add_executable(upx_extension_test "${extension_fixture_source}")
 target_link_libraries(upx_extension_test PRIVATE ${CMAKE_DL_LIBS})
 add_library(upx_extension_fixture SHARED "${extension_fixture_source}")
