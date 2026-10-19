@@ -34,7 +34,7 @@
 class FileBase {
 protected:
     explicit FileBase() noexcept = default;
-    virtual ~FileBase() may_throw;
+    virtual ~FileBase() noexcept;
 
 public:
     bool close_noexcept() noexcept;

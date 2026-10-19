@@ -6659,6 +6659,7 @@ unsigned PackLinuxElf64::forward_Shdrs(OutputFile *fo, Elf64_Ehdr *const eho)
                         sh_out->sh_offset = sh_out->sh_addr;
                     }
                 } break;
+                default: break;
                 } // end {Shdr, Dynamic} pairs
                 ++sh_out; ++n_sh_out;
             }
@@ -7522,6 +7523,7 @@ void PackLinuxElf32::un_DT_INIT(
         case Elf32_Dyn::DT_FINI: if (is_asl) {
             set_te32(&dyn->d_val, val - asl_delta);
         }; break;
+        default: break;
         } // end switch() on tag when is_asl
         if (upx_dt_init == tag) {
             if (Elf32_Dyn::DT_INIT == tag) { // the easy case
@@ -7712,6 +7714,7 @@ void PackLinuxElf64::un_DT_INIT(
         case Elf64_Dyn::DT_FINI: if (is_asl) {
             set_te64(&dyn->d_val, val - asl_delta);
         }; break;
+        default: break;
         } // end switch() on tag when is_asl
         if (upx_dt_init == tag) { // the easy case
             if (Elf64_Dyn::DT_INIT == tag) {

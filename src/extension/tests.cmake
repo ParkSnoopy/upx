@@ -9,6 +9,7 @@ add_executable(upx_extension_test "${extension_fixture_source}")
 target_link_libraries(upx_extension_test PRIVATE ${CMAKE_DL_LIBS})
 add_library(upx_extension_fixture SHARED "${extension_fixture_source}")
 target_compile_definitions(upx_extension_fixture PRIVATE UPX_EXTENSION_SHARED_FIXTURE=1)
+set(extension_targets "$<TARGET_FILE:upx_extension_test>")
 
 foreach(method IN ITEMS nrv2b lzma)
     foreach(kind IN ITEMS main library)
@@ -21,6 +22,7 @@ foreach(method IN ITEMS nrv2b lzma)
             set(packed "${CMAKE_CURRENT_BINARY_DIR}/XTesting/$<CONFIG>/extension-${method}.so")
             set(target "$<TARGET_FILE:upx_extension_test>")
         endif()
+        list(APPEND extension_targets "${packed}")
         set(pack_test "upx-extension-pack-${kind}-${method}")
         upx_add_test(${pack_test} upx -1 --${method} "${input}" --force-overwrite -o "${packed}")
         foreach(tool IN ITEMS upx-normal ida ida64 idat idat64 idaq idaq64 ghidra ghidraRun
@@ -45,6 +47,9 @@ foreach(method IN ITEMS nrv2b lzma)
 endforeach()
 
 set(opaque_packed "${CMAKE_CURRENT_BINARY_DIR}/XTesting/$<CONFIG>/extension-opaque")
+list(APPEND extension_targets "${opaque_packed}")
+string(REPLACE ";" "\", \"" extension_targets "${extension_targets}")
+target_compile_definitions(upx_extension_test PRIVATE "UPX_EXTENSION_TARGETS=\"${extension_targets}\"")
 upx_add_test(upx-extension-pack-main-opaque upx -1 --opaque
              "$<TARGET_FILE:upx_extension_test>" --force-overwrite -o "${opaque_packed}")
 upx_add_test(upx-extension-opaque-run upx_extension_test "${opaque_packed}" main
@@ -60,3 +65,11 @@ upx_add_test(upx-extension-opaque-unpack upx -d "${opaque_packed}" -o "${opaque_
 upx_test_depends(upx-extension-opaque-unpack upx-extension-pack-main-opaque)
 upx_add_test(upx-extension-opaque-unpacked-run "${opaque_unpacked}" --fixture)
 upx_test_depends(upx-extension-opaque-unpacked-run upx-extension-opaque-unpack)
+
+upx_add_test(upx-extension-reject-executable upx_extension_test "${opaque_unpacked}" main
+             "${opaque_unpacked}" upx-normal original)
+upx_test_depends(upx-extension-reject-executable upx-extension-opaque-unpack)
+upx_add_test(upx-extension-reject-library upx_extension_test --load
+             "$<TARGET_FILE:upx_extension_fixture>")
+set_tests_properties(upx-extension-reject-executable upx-extension-reject-library
+                     PROPERTIES WILL_FAIL TRUE)

@@ -72,15 +72,13 @@
 // FileBase
 **************************************************************************/
 
-FileBase::~FileBase() may_throw {
+FileBase::~FileBase() noexcept {
 #if 0 && defined(__GNUC__) // debug
     if (isOpen())
         fprintf(stderr, "%s: %s\n", _name, __PRETTY_FUNCTION__);
 #endif
-    if (std::uncaught_exceptions() == 0)
-        closex(); // may_throw
-    else
-        close_noexcept(); // currently in exception unwinding, use noexcept variant
+    // Successful operations call closex() explicitly to report close errors.
+    close_noexcept();
 }
 
 bool FileBase::do_sopen() {
@@ -334,6 +332,8 @@ upx_off_t OutputFile::seek(upx_off_t off, int whence) {
     case SEEK_END:
         _length = bytes_written; // necessary
         break;
+    default:
+        break;
     }
     return super::seek(off, whence);
 }
@@ -385,6 +385,8 @@ void OutputFile::dump(const char *name, SPAN_P(const void) buf, upx_int64_t blen
 **************************************************************************/
 
 TEST_CASE("file") {
+    static_assert(std::is_nothrow_destructible<InputFile>::value);
+    static_assert(std::is_nothrow_destructible<OutputFile>::value);
     InputFile fi;
     CHECK(!fi.isOpen());
     CHECK(fi.getFd() == -1);

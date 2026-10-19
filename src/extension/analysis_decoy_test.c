@@ -14,6 +14,14 @@ int extension_fixture(void) { return 42; }
 #include <sys/wait.h>
 #include <unistd.h>
 
+static char const *fixture_path(char const *requested)
+{
+    static char const *const paths[] = { UPX_EXTENSION_TARGETS };
+    for (size_t i = 0; i < sizeof(paths) / sizeof(paths[0]); ++i)
+        if (strcmp(requested, paths[i]) == 0) return paths[i];
+    return NULL;
+}
+
 int main(int argc, char **argv)
 {
     if (argc == 2 && strcmp(argv[1], "--fixture") == 0) {
@@ -21,7 +29,9 @@ int main(int argc, char **argv)
         return 0;
     }
     if (argc == 3 && strcmp(argv[1], "--load") == 0) {
-        void *library = dlopen(argv[2], RTLD_NOW | RTLD_LOCAL);
+        char const *path = fixture_path(argv[2]);
+        if (!path) return 2;
+        void *library = dlopen(path, RTLD_NOW | RTLD_LOCAL);
         int (*fixture)(void);
         if (!library) {
             fprintf(stderr, "%s\n", dlerror());
@@ -34,6 +44,9 @@ int main(int argc, char **argv)
         return 0;
     }
     if (argc != 6 && argc != 7) return 2;
+    char const *target = fixture_path(argv[1]);
+    char const *packed = fixture_path(argv[3]);
+    if (!target || !packed) return 2;
 
     /* Name the waiting parent, not the target, to exercise a separate process. */
     if (prctl(PR_SET_NAME, argv[4], 0, 0, 0) != 0) return 1;
@@ -50,9 +63,9 @@ int main(int argc, char **argv)
         if (dup2(output[1], STDOUT_FILENO) < 0) _exit(126);
         close(output[1]);
         if (strcmp(argv[2], "main") == 0)
-            execl(argv[1], argv[1], "--fixture", (char *)0);
+            execl(target, target, "--fixture", (char *)0);
         else
-            execl(argv[1], argv[1], "--load", argv[3], (char *)0);
+            execl(target, target, "--load", packed, (char *)0);
         _exit(127);
     }
     close(output[1]);

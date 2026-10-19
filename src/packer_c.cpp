@@ -47,8 +47,9 @@
     case 41:  // UPX_F_DYLIB_PPC64LE       41 // DOES NOT EXIST
     case 130: // UPX_F_SOLARIS_SPARC      130 // NOT IMPLEMENTED
         return false;
+    default:
+        return true;
     }
-    return true;
 }
 
 /*static*/ bool Packer::isValidCompressionMethod(int m) noexcept {

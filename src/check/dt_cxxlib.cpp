@@ -2593,8 +2593,9 @@ struct TestConstant final {
         switch (n) {
         case 41:
             return 0;
+        default:
+            return T(-1);
         }
-        return T(-1);
     }
     template <class T>
     static noinline T noinline_sw7(T n) noexcept {
@@ -2602,8 +2603,9 @@ struct TestConstant final {
         case 41:
         case 91:
             return 0;
+        default:
+            return T(-1);
         }
-        return T(-1);
     }
     template <class T>
     static noinline T noinline_sw8(T n) noexcept {
@@ -2612,8 +2614,9 @@ struct TestConstant final {
         case 91:
         case 117:
             return 0;
+        default:
+            return T(-1);
         }
-        return T(-1);
     }
     template <class T>
     static noinline T noinline_sw9(T n) noexcept {
@@ -2623,8 +2626,9 @@ struct TestConstant final {
         case 117:
         case 127:
             return 0;
+        default:
+            return T(-1);
         }
-        return T(-1);
     }
 };
 
