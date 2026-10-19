@@ -229,6 +229,10 @@ my_bkpt: .globl my_bkpt
 proc_self_exe:
         .asciz "/proc/self/exe"
 
+memfd_create: .globl memfd_create
+        movl $__NR_memfd_create,%eax; syscall
+        ret
+
 upxfd_create: .globl upxfd_create // (char *tag, unsigned flags)
 0: // try memfd_create
         movl $__NR_memfd_create,%eax; syscall
