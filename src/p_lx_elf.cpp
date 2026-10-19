@@ -788,22 +788,26 @@ off_t PackLinuxElf64::pack3(OutputFile *fo, Filter &ft)
     }
 
     total_out = super::pack3(fo, ft);  // loader follows compressed PT_LOADs
-    u64_t opaque_bias = 0;
-    if (fo && xct_off && ph.opaque) {
+    u64_t loader_bias = 0;
+    if (fo && xct_off && Elf64_Ehdr::EM_X86_64 == e_machine) {
         u64_t const mapped_end = page_mask & (~page_mask + load_va + sz_pack2 + lsize);
         for (unsigned j = 0; j < e_phnum; ++j) {
-            if (is_LOAD(&phdri[j])
+            unsigned const type = get_te32(&phdri[j].p_type);
+            bool const late_note = (Elf64_Phdr::PT_NOTE == type || Elf64_Phdr::PT_GNU_PROPERTY == type)
+                && get_te64(&phdri[j].p_filesz)
+                && xct_off < get_te64(&phdri[j].p_offset) + get_te64(&phdri[j].p_filesz);
+            if (late_note || (ph.opaque && is_LOAD(&phdri[j])
             && (Elf64_Phdr::PF_W & get_te32(&phdri[j].p_flags))
-            && (page_mask & get_te64(&phdri[j].p_vaddr)) < mapped_end) {
-                // Stored data can grow into a writable mapping. Map it again above the image.
-                opaque_bias = (page_mask & (~page_mask + getbrk(phdri, e_phnum))) - load_va;
-                if (opaque_bias > 0xffffffffu - sz_pack2)
-                    throwCantPack("opaque shared-library loader offset is too large");
+            && (page_mask & get_te64(&phdri[j].p_vaddr)) < mapped_end)) {
+                // Keep stored data and loader-visible notes above the restored image.
+                loader_bias = (page_mask & (~page_mask + getbrk(phdri, e_phnum))) - load_va;
+                if (loader_bias > 0xffffffffu - sz_pack2)
+                    throwCantPack("shared-library loader offset is too large");
                 unsigned value;
-                set_te32(&value, (unsigned)(opaque_bias + sz_pack2 - 4*sizeof(unsigned)));
+                set_te32(&value, (unsigned)(loader_bias + sz_pack2 - 4*sizeof(unsigned)));
                 fo->seek(sz_pack2 - 4*sizeof(unsigned), SEEK_SET);
                 fo->rewrite(&value, sizeof(value));  // So_info.off_reloc: retain the original base
-                set_te32(&value, (unsigned)(opaque_bias + overlay_offset - sizeof(linfo)));
+                set_te32(&value, (unsigned)(loader_bias + overlay_offset - sizeof(linfo)));
                 fo->seek(sz_pack2 - sizeof(unsigned), SEEK_SET);
                 fo->rewrite(&value, sizeof(value));  // So_info.off_info: use the separate mapping
                 fo->seek(0, SEEK_END);
@@ -820,7 +824,7 @@ off_t PackLinuxElf64::pack3(OutputFile *fo, Filter &ft)
                      : (Elf64_Ehdr::EM_PPC64   == e_machine) ? R_PPC64_RELATIVE
                      : 0;
         set_te64(&rela.r_info, ELF64_R_INFO(0 /*ELF64_R_SYM(r_info)*/, r_type));
-        set_te64(&rela.r_addend, opaque_bias + sz_pack2);  // entry to decompressor
+        set_te64(&rela.r_addend, loader_bias + sz_pack2);  // entry to decompressor
         fo->rewrite(&rela, sizeof(rela));
 
         fo->seek(0, SEEK_END);
@@ -860,7 +864,7 @@ off_t PackLinuxElf64::pack3(OutputFile *fo, Filter &ft)
         set_te64(&elfout.ehdr.e_entry, abrk + get_te64(&elfout.ehdr.e_entry) - vbase);
     }
     if (0!=xct_off) { // shared library
-        u64_t const cpr_entry = load_va + opaque_bias + sz_pack2;
+        u64_t const cpr_entry = load_va + loader_bias + sz_pack2;
         set_te64(&file_image[user_init_off], cpr_entry);  // set the hook
 
         if (user_init_rp) { // decompressor needs hint for DT_INIT_ARRAY
@@ -885,7 +889,7 @@ off_t PackLinuxElf64::pack3(OutputFile *fo, Filter &ft)
             *outp++ = *phdr;  // propagate
             if (PT_LOAD == type) {
                 if (!ioff) { // keep rtld metadata mapped below the restored code
-                    u64_t const mapped_size = opaque_bias ? umin(len, (u64_t)xct_off) : sz_pack2 + lsize;
+                    u64_t const mapped_size = loader_bias ? umin(len, (u64_t)xct_off) : sz_pack2 + lsize;
                     set_te64(&phdr->p_filesz, mapped_size);
                     set_te64(&phdr->p_memsz,  mapped_size);
                 }
@@ -927,6 +931,20 @@ off_t PackLinuxElf64::pack3(OutputFile *fo, Filter &ft)
                     }
                 }
                 continue;  // all done with this PT_LOAD
+            }
+            if (loader_bias && len && xct_off < ioff + len
+            && (Elf64_Phdr::PT_NOTE == type || Elf64_Phdr::PT_GNU_PROPERTY == type)) {
+                // rtld reads these notes before calling the decompressor.
+                if (align > (0 - page_mask) || (align & (align - 1)))
+                    throwCantPack("invalid shared-library note alignment");
+                off = fpadN(fo, align ? (align - 1) & (0 - off) : 0);
+                set_te64(&phdr->p_offset, off);
+                set_te64(&phdr->p_vaddr, load_va + loader_bias + off);
+                phdr->p_paddr = phdr->p_vaddr;
+                fo->write(file_image.subref("bad shared-library note", ioff, len), len);
+                off += len;
+                total_out = off;
+                continue;
             }
             if (xct_off < ioff) {
                 set_te64(&phdr->p_offset, so_slide + (is_asl ? asl_delta : 0) + ioff);
@@ -995,7 +1013,7 @@ off_t PackLinuxElf64::pack3(OutputFile *fo, Filter &ft)
             ehdri.e_shoff = 0;
             ehdri.e_shstrndx = 0;
         }
-        if (opaque_bias) {
+        if (loader_bias) {
             // Keep every original Phdr and its index; append the loader mapping in a new table.
             total_out = fpadN(fo, (8 - (total_out & 7)) & 7);
             unsigned const table_offset = total_out;
@@ -1003,7 +1021,7 @@ off_t PackLinuxElf64::pack3(OutputFile *fo, Filter &ft)
             MemBuffer table(table_size);
             memcpy(table, phdr0, e_phnum * sizeof(Elf64_Phdr));
             Elf64_Phdr *const headers = (Elf64_Phdr *)table.getVoidPtr();
-            u64_t const mapped_va = load_va + opaque_bias;
+            u64_t const mapped_va = load_va + loader_bias;
             for (unsigned j = 0; j < e_phnum; ++j) {
                 if (Elf64_Phdr::PT_PHDR == get_te32(&headers[j].p_type)) {
                     set_te64(&headers[j].p_offset, table_offset);
@@ -1182,7 +1200,7 @@ PackLinuxElf64::PackLinuxElf64help1(InputFile *f)
     }
     if (separate_loader) {
         // Construction precedes archive decoding; canUnpack re-enters after verification.
-        if (!ph.opaque)
+        if (ph.format < 0)
             return;
         if (ph.format != UPX_F_LINUX_ELF64_AMD64)
             throwCantUnpack("bad e_phoff %p", (void *)e_phoff);
@@ -1222,7 +1240,7 @@ PackLinuxElf64::PackLinuxElf64help1(InputFile *f)
             ||  get_te64(&extra->p_filesz) < last_Phdr
             ||  extra->p_filesz != extra->p_memsz
             ||  get_te64(&extra->p_vaddr) < (u64_t)getbrk(phdri, e_phnum))
-                throwCantUnpack("invalid opaque shared-library loader mapping");
+                throwCantUnpack("invalid shared-library loader mapping");
         }
         if (!(opt->cmd == CMD_COMPRESS && e_shoff < (upx_uint64_t)file_size && mb_shdr.getSize() == 0)) {
             shdri = nullptr;
@@ -3619,7 +3637,7 @@ tribool PackLinuxElf64::canUnpack() // bool, except -1: format known, but not pa
     }
     if (Elf64_Ehdr::ET_DYN==get_te16(&ehdri.e_type)) {
         if (get_te64(&ehdri.e_phoff) != sizeof(Elf64_Ehdr)
-        && (!super::canUnpack() || !ph.opaque))
+        && !super::canUnpack())
             return false;
         PackLinuxElf64help1(fi);
     }
@@ -7906,7 +7924,7 @@ void PackLinuxElf64::un_DT_INIT(
 void PackLinuxElf64::unpack(OutputFile *fo)
 {
     if (e_phoff != sizeof(Elf64_Ehdr)
-    && (!ph.opaque || Elf64_Ehdr::ET_DYN != e_type)) {
+    && (ph.format != UPX_F_LINUX_ELF64_AMD64 || Elf64_Ehdr::ET_DYN != e_type)) {
         throwCantUnpack("bad e_phoff");
     }
     unsigned const c_phnum = get_te16(&ehdri.e_phnum);
