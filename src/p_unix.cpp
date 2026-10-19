@@ -37,6 +37,7 @@
 #include "packer.h"
 #include "p_unix.h"
 #include "p_elf.h"
+#include "extension/opaque_store.h"
 
 // do not change
 #define BLOCKSIZE       (512*1024)
@@ -327,7 +328,7 @@ void PackUnix::pack(OutputFile *fo)
     pack4(fo, ft);  // append PackHeader and overlay_offset; update Elf header
 
     // finally check the compression ratio
-    if (!checkFinalCompressionRatio(fo))
+    if (!opt->o_unix.opaque && !checkFinalCompressionRatio(fo))
         throwNotCompressible();
 }
 
@@ -366,7 +367,12 @@ void PackUnix::packExtent(
         ph.c_len = ph.u_len = l;
         ph.overlap_overhead = 0;
         unsigned end_u_adler = 0;
-        if (ft) {
+        if (opt->o_unix.opaque) {
+            memcpy(obuf, ibuf, l);
+            opaque_xor(obuf, l, l, l);
+            end_u_adler = upx_adler32(ibuf, l, init_u_adler);
+        }
+        else if (ft) {
             // compressWithFilters() updates u_adler _inside_ compress();
             // that is, AFTER filtering.  We want BEFORE filtering,
             // so that decompression checks the end-to-end checksum.
@@ -399,10 +405,14 @@ void PackUnix::packExtent(
         if (ph.c_len >= ph.u_len) {
             // block is not compressible, or not in-place de-compressible
             ph.c_len = ph.u_len;
-            memcpy(obuf, ibuf, ph.c_len);
-            // must update checksum of "compressed" data
-            // Input to adler32 is value before the failure.
-            ph.c_adler = upx_adler32(ibuf, ph.u_len, init_c_adler);
+            if (opt->o_unix.opaque) {
+                ph.c_adler = upx_adler32(obuf, ph.c_len, init_c_adler);
+            } else {
+                memcpy(obuf, ibuf, ph.c_len);
+                // must update checksum of "compressed" data
+                // Input to adler32 is value before the failure.
+                ph.c_adler = upx_adler32(ibuf, ph.u_len, init_c_adler);
+            }
         }
 
         // write block sizes
@@ -440,7 +450,9 @@ void PackUnix::packExtent(
         memset(&tmp, 0, sizeof(tmp));
         set_te32(&tmp.sz_unc, ph.u_len);
         set_te32(&tmp.sz_cpr, ph.c_len);
-        if (ph.c_len < ph.u_len) {
+        if (opt->o_unix.opaque) {
+            tmp.b_method = OPAQUE_B_METHOD;
+        } else if (ph.c_len < ph.u_len) {
             tmp.b_method = (unsigned char) ph.method;
             if (ft) {
                 tmp.b_ftid = (unsigned char) ft->id;
@@ -452,7 +464,7 @@ void PackUnix::packExtent(
         total_out += sizeof(tmp);
         b_len += sizeof(b_info);
 
-        if (ft) {
+        if (opt->o_unix.opaque || ft) {
             ph.u_adler = end_u_adler;
         }
         // write compressed data
@@ -464,7 +476,7 @@ void PackUnix::packExtent(
                 verifyOverlappingDecompression(ft);
         }
         else {
-            fo->write(ibuf, ph.u_len);
+            fo->write(opt->o_unix.opaque ? obuf : ibuf, ph.u_len);
             total_out += ph.u_len;
         }
 
@@ -490,7 +502,7 @@ unsigned PackUnix::unpackExtent(unsigned wanted, OutputFile *fo,
         int const sz_cpr = ph.c_len = get_te32(&hdr.sz_cpr);
         ph.filter_cto = hdr.b_cto8;
 
-        if (sz_unc == 0 || M_LZMA < hdr.b_method) {
+        if (sz_unc == 0 || (M_LZMA < hdr.b_method && OPAQUE_B_METHOD != hdr.b_method)) {
             throwCantUnpack("corrupt b_info");
             break;
         }
@@ -533,6 +545,8 @@ unsigned PackUnix::unpackExtent(unsigned wanted, OutputFile *fo,
         }
         else if (sz_cpr == sz_unc) { // slide literal (non-compressible) block
             memcpy(&ibuf[inlen], cbuf, sz_unc);
+            if (hdr.b_method == OPAQUE_B_METHOD)
+                opaque_xor(&ibuf[inlen], sz_unc, sz_unc, sz_unc);
         }
         // update checksum of uncompressed data
         u_adler = upx_adler32(ibuf + inlen, sz_unc, u_adler);

@@ -43,3 +43,20 @@ foreach(method IN ITEMS nrv2b lzma)
         endforeach()
     endforeach()
 endforeach()
+
+set(opaque_packed "${CMAKE_CURRENT_BINARY_DIR}/XTesting/$<CONFIG>/extension-opaque")
+upx_add_test(upx-extension-pack-main-opaque upx -1 --opaque
+             "$<TARGET_FILE:upx_extension_test>" --force-overwrite -o "${opaque_packed}")
+upx_add_test(upx-extension-opaque-run upx_extension_test "${opaque_packed}" main
+             "${opaque_packed}" upx-normal original)
+upx_test_depends(upx-extension-opaque-run upx-extension-pack-main-opaque)
+upx_add_test(upx-extension-opaque-decoy upx_extension_test "${opaque_packed}" main
+             "${opaque_packed}" ida decoy)
+upx_test_depends(upx-extension-opaque-decoy upx-extension-pack-main-opaque)
+set_tests_properties(upx-extension-opaque-decoy PROPERTIES RUN_SERIAL TRUE TIMEOUT 20)
+
+set(opaque_unpacked "${CMAKE_CURRENT_BINARY_DIR}/XTesting/$<CONFIG>/extension-opaque-unpacked")
+upx_add_test(upx-extension-opaque-unpack upx -d "${opaque_packed}" -o "${opaque_unpacked}" -f)
+upx_test_depends(upx-extension-opaque-unpack upx-extension-pack-main-opaque)
+upx_add_test(upx-extension-opaque-unpacked-run "${opaque_unpacked}" --fixture)
+upx_test_depends(upx-extension-opaque-unpacked-run upx-extension-opaque-unpack)

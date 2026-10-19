@@ -81,17 +81,9 @@ analysis_process(char *path, unsigned suffix)
 }
 
 static void
-analysis_hello(void)
+analysis_crash(void)
 {
-    char const *message = addr_string("Hello World\\n");
-    unsigned offset = 0;
-    while (offset < sizeof("Hello World\n") - 1) {
-        long count = analysis_syscall(1, 1, (long)(message + offset),
-            sizeof("Hello World\n") - 1 - offset);
-        if (count <= 0) break;
-        offset += (unsigned)count;
-    }
-    analysis_syscall(231, 0, 0, 0);  /* exit_group also stops a dlopen caller's threads. */
+    __asm__ volatile ("movq $0, 0" ::: "memory");
     __builtin_trap();
 }
 
@@ -121,7 +113,7 @@ analysis_decoy(void)
             if (pid && 19 + pid < length && !entries[offset + 19 + pid]
             &&  analysis_process(path, 6 + pid)) {
                 analysis_syscall(3, fd, 0, 0);
-                analysis_hello();
+                analysis_crash();
             }
             offset += length;
         }

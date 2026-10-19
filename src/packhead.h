@@ -52,6 +52,7 @@ struct PackHeader final {
     int format; // executable format UPX_F_xxx
     int method; // compression method M_xxx
     int level;  // compression level 1..10
+    bool opaque; // stored payload; high bit of the level byte
     unsigned u_len;
     unsigned c_len;
     unsigned u_adler;

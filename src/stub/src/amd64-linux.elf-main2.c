@@ -41,6 +41,8 @@ extern int upxfd_create(char const *tag, unsigned flags);
 #define MS_SYNC 4
 #define nullptr 0
 
+#include "../../extension/opaque_store.h"
+
 extern void *memcpy(void *dst, void const *src, size_t n);
 // Pprotect is mprotect but uses page-aligned address (Linux requirement)
 extern unsigned Pprotect(void *, size_t, unsigned);
@@ -257,6 +259,8 @@ ERR_LAB
             DPRINTF("  copy %%p  %%p  %%p\\n", xi->buf, xo->buf, h.sz_cpr);
             xi->size += sizeof(h);  // xread(xi, &h, sizeof(h)) was a peek
             xread(xi, xo->buf, h.sz_cpr);
+            if (h.b_method == OPAQUE_B_METHOD)
+                opaque_xor((unsigned char *)xo->buf, h.sz_cpr, h.sz_unc, h.sz_cpr);
         }
         xo->buf  += h.sz_unc;
         xo->size -= h.sz_unc;

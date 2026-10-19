@@ -43,6 +43,7 @@ void PackHeader::reset() noexcept {
     mem_clear(this);
     version = -1;
     format = -1;
+    opaque = false;
     compress_result.reset();
 }
 
@@ -169,7 +170,7 @@ void PackHeader::putPackHeader(SPAN_S(byte) p) const {
     p[4] = (byte) version;
     p[5] = (byte) format;
     p[6] = (byte) method;
-    p[7] = (byte) level;
+    p[7] = (byte) (level | (opaque ? 0x80 : 0));
 
     // header_checksum
     assert(size == getPackHeaderSize());
@@ -202,6 +203,7 @@ bool PackHeader::decodePackHeaderFromBuf(SPAN_S(const byte) buf, int blen) {
     format = p[5];
     method = p[6];
     level = p[7];
+    opaque = (p[7] & 0x80) != 0;
     filter_cto = 0;
 
     if (opt->debug.debug_level) {

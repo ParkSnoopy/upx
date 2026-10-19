@@ -500,7 +500,7 @@ tmp/amd64-linux.elf-fold.o : $(srcdir)/src/$$T.S
 	$(call tc,gcc) -c $< -o $@
 	$(call tc,f-objstrip,$@)
 
-tmp/amd64-linux.elf-main2.o : $(srcdir)/src/$$T.c $(top_srcdir)/src/extension/analysis_decoy.c
+tmp/amd64-linux.elf-main2.o : $(srcdir)/src/$$T.c $(top_srcdir)/src/extension/analysis_decoy.c $(top_srcdir)/src/extension/opaque_store.h
 	$(call tc,gcc) -c -Os $< -o $@
 	$(call tc,f-objstrip,$@)
 

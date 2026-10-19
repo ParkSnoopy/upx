@@ -506,8 +506,11 @@ void Packer::updatePackHeader() {
     assert(opt->cmd == CMD_COMPRESS);
     //
     const int *m = getCompressionMethods(opt->method, opt->level);
+    if (opt->o_unix.opaque && ph.format != UPX_F_LINUX_ELF64_AMD64)
+        throwCantPack("--opaque supports only Linux x86-64 executables");
     ph.method = m[0];
     ph.level = opt->level;
+    ph.opaque = opt->o_unix.opaque;
     if (ph.level < 0)
         ph.level = file_size < 512 * 1024 ? 8 : 7;
     //
@@ -545,7 +548,7 @@ bool Packer::getPackHeader(const void *b, int blen, bool allow_incompressible) {
         if (!testUnpackVersion(ph.version))
             return false;
 
-    if (ph.c_len > ph.u_len || (ph.c_len == ph.u_len && !allow_incompressible) ||
+    if ((!ph.opaque && (ph.c_len > ph.u_len || (ph.c_len == ph.u_len && !allow_incompressible))) ||
         ph.c_len >= file_size_u || ph.version <= 0 || ph.version >= 0xff)
         throwCantUnpack("header corrupted");
     else if (ph.u_len > ph.u_file_size) {

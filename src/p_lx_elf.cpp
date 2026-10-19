@@ -41,6 +41,7 @@
 #include "p_unix.h"
 #include "p_lx_exc.h"
 #include "p_lx_elf.h"
+#include "extension/opaque_store.h"
 #include "ui.h"
 
 // NOLINTBEGIN(clang-analyzer-core.CallAndMessage)
@@ -6020,6 +6021,8 @@ int PackLinuxElf64::pack2(OutputFile *fo, Filter &ft)
     //is_asl = (!!saved_opt_android_shlib) << 1;  // bit 1; see is_shlib
     is_asl = 0;
     unsigned const is_shlib = (0!=xct_off) | is_asl;
+    if (opt->o_unix.opaque && is_shlib)
+        throwCantPack("--opaque supports only Linux x86-64 executables");
     unsigned pre_xct_top = 0;  // offset of end of PT_LOAD _before_ xct_off
 
     if (Elf64_Ehdr::EM_ARM==get_te16(&ehdri.e_machine)) {
@@ -7861,7 +7864,7 @@ void PackLinuxElf64::unpack(OutputFile *fo)
     p_info hbuf;  fi->readx(&hbuf, sizeof(hbuf));
     unsigned orig_file_size = get_te32(&hbuf.p_filesize);
     blocksize = get_te32(&hbuf.p_blocksize);
-    if ((u32_t)file_size > orig_file_size || blocksize > orig_file_size
+    if ((!ph.opaque && (u32_t)file_size > orig_file_size) || blocksize > orig_file_size
         || (orig_file_size >> 8) > (u32_t)file_size  // heuristic anti-fuzz
         ||      (blocksize >> 8) > (u32_t)file_size
         || !mem_size_valid(1, blocksize, OVERHEAD))
@@ -8069,7 +8072,8 @@ void PackLinuxElf64::unpack(OutputFile *fo)
                 unsigned method = bp->b_method;
                 unsigned ftid = bp->b_ftid;
                 unsigned cto8 = bp->b_cto8;
-                if (!( ((sz_cpr == sz_unc) && (0 == word3) && (size == sz_unc)) // incompressible literal
+                if (!( ((sz_cpr == sz_unc) && (0 == word3 || OPAQUE_B_METHOD == word3)
+                        && (size == sz_unc)) // incompressible literal
                     || ((sz_cpr <  sz_unc)
                         && (method == prev_method || M_NRV2B_LE32 == prev_method)
                         && (0 == ftid) && (0 == cto8)) )
@@ -8102,7 +8106,8 @@ void PackLinuxElf64::unpack(OutputFile *fo)
                     ftid = bp->b_ftid;
                     cto8 = bp->b_cto8;
                     if (0 <= boff  // found
-                    && ( ((sz_cpr == sz_unc) && (0 == word3) && (size == sz_unc)) // incompressible literal
+                    && ( ((sz_cpr == sz_unc) && (0 == word3 || OPAQUE_B_METHOD == word3)
+                        && (size == sz_unc)) // incompressible literal
                       || ((sz_cpr <  sz_unc) && (0 == ftid) && (0 == cto8)
                           && ((is_be ? bp->b_extra : bp->b_method) == prev_method)) )
                     ) {
@@ -9137,7 +9142,7 @@ void PackLinuxElf32::unpack(OutputFile *fo)
     p_info hbuf;  fi->readx(&hbuf, sizeof(hbuf));
     unsigned orig_file_size = get_te32(&hbuf.p_filesize);
     blocksize = get_te32(&hbuf.p_blocksize);
-    if ((u32_t)file_size > orig_file_size || blocksize > orig_file_size
+    if ((!ph.opaque && (u32_t)file_size > orig_file_size) || blocksize > orig_file_size
         || (orig_file_size >> 8) > (u32_t)file_size  // heuristic anti-fuzz
         ||      (blocksize >> 8) > (u32_t)file_size
         || !mem_size_valid(1, blocksize, OVERHEAD))
@@ -9323,7 +9328,8 @@ void PackLinuxElf32::unpack(OutputFile *fo)
                 unsigned method = bp->b_method;
                 unsigned ftid = bp->b_ftid;
                 unsigned cto8 = bp->b_cto8;
-                if (!( ((sz_cpr == sz_unc) && (0 == word3) && (size == sz_unc)) // incompressible literal
+                if (!( ((sz_cpr == sz_unc) && (0 == word3 || OPAQUE_B_METHOD == word3)
+                        && (size == sz_unc)) // incompressible literal
                     || ((sz_cpr <  sz_unc)
                         && (method == prev_method || M_NRV2B_LE32 == prev_method)
                         && (0 == ftid) && (0 == cto8)) )
@@ -9355,7 +9361,8 @@ void PackLinuxElf32::unpack(OutputFile *fo)
                     ftid = bp->b_ftid;
                     cto8 = bp->b_cto8;
                     if (0 <= boff  // found
-                    && ( ((sz_cpr == sz_unc) && (0 == word3) && (size == sz_unc)) // incompressible literal
+                    && ( ((sz_cpr == sz_unc) && (0 == word3 || OPAQUE_B_METHOD == word3)
+                        && (size == sz_unc)) // incompressible literal
                       || ((sz_cpr <  sz_unc) && (0 == ftid) && (0 == cto8)
                           && ((is_be ? bp->b_extra : bp->b_method) == prev_method)) )
                     ) {

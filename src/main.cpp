@@ -741,6 +741,9 @@ static noinline int do_option(int optc, const char *arg) {
     case 679:
         opt->o_unix.catch_sigsegv = true;
         break;
+    case 680:
+        opt->o_unix.opaque = true;
+        break;
     // ps1/exe
     case 670:
         opt->ps1_exe.boot_only = true;
@@ -956,6 +959,7 @@ int main_get_options(int argc, char **argv) {
         {"force-pie", 0x90, N, 677},
         {"android-old", 0, N, 678},
         {"catch-sigsegv", 0, N, 679},
+        {"opaque", 0x10, N, 680},
         // ps1/exe
         {"boot-only", 0x90, N, 670},
         {"no-align", 0x90, N, 671},

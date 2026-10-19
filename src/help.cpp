@@ -309,6 +309,7 @@ void show_help(int verbose) {
                     "  --lzma              try LZMA [slower but tighter than NRV]\n"
                     "  --brute             try all available compression methods & filters [slow]\n"
                     "  --ultra-brute       try even more compression variants [very slow]\n"
+                    "  --opaque            store blocks scrambled (Linux x86-64 only)\n"
                     "\n");
         fg = con_fg(f, FG_YELLOW);
         con_fprintf(f, "Backup options:\n");

@@ -7,6 +7,7 @@ int extension_fixture(void) { return 42; }
 
 #include <dlfcn.h>
 #include <errno.h>
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/prctl.h>
@@ -68,12 +69,20 @@ int main(int argc, char **argv)
     int status;
     pid_t result;
     do result = waitpid(child, &status, 0); while (result < 0 && errno == EINTR);
-    char const *expected = strcmp(argv[5], "decoy") == 0
-        ? "Hello World\n" : "Original program\n";
-    if (result != child || !WIFEXITED(status) || WEXITSTATUS(status) != 0
-    || used != strlen(expected) || memcmp(actual, expected, used) != 0) {
-        fprintf(stderr, "Expected: %sActual: %.*s\n", expected, (int)used, actual);
-        return 1;
+    if (strcmp(argv[5], "decoy") == 0) {
+        if (result != child || !WIFSIGNALED(status) || WTERMSIG(status) != SIGSEGV
+        || used != 0) {
+            fprintf(stderr, "Expected SIGSEGV, status %#x, output: %.*s\n",
+                status, (int)used, actual);
+            return 1;
+        }
+    } else {
+        char const *expected = "Original program\n";
+        if (result != child || !WIFEXITED(status) || WEXITSTATUS(status) != 0
+        || used != strlen(expected) || memcmp(actual, expected, used) != 0) {
+            fprintf(stderr, "Expected: %sActual: %.*s\n", expected, (int)used, actual);
+            return 1;
+        }
     }
     return 0;
 }
