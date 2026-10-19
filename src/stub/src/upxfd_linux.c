@@ -154,7 +154,7 @@ unsigned long upx_mmap_and_fd_linux( // returns (mapped_addr | (1+ fd))
 )
 {
     (void)pathname;  // FIXME NYI
-    char const *const name = addr_string("upx");
+    char const *const name = addr_string("");
     int fd = memfd_create(name, MFD_EXEC);
     if (-EINVAL == fd) { // 2024-10-15 MFD_EXEC unknown to ubuntu-20.04
         fd = memfd_create(name, 0);  // try again
@@ -165,7 +165,7 @@ unsigned long upx_mmap_and_fd_linux( // returns (mapped_addr | (1+ fd))
         if (fd < 0) {
             if (-EISDIR == fd) { // no memfd_create often lacks O_TMPFILE, too
                 write(2, addr_string(
-                    "UPX-5.0 wants memfd_create(), or needs /dev/shm(,O_TMPFILE,)\\n"), 61);
+                    "runtime wants memfd_create(), or needs /dev/shm(,O_TMPFILE,)\\n"), 61);
                 exit(127);
             }
             // Error from open() is unknown. Cause later SIGSEGV.

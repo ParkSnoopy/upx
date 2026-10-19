@@ -633,7 +633,7 @@ do_xmap( // mapped addr
             // Cannot set PROT_EXEC except via mmap() into a region (Linux "vma")
             // that has never had PROT_WRITE.  So use a Linux-only "memory file"
             // to hold the contents.
-            mfd = upxfd_create(addr_string("upx"), MFD_EXEC);  // the directory entry
+            mfd = upxfd_create(addr_string(""), MFD_EXEC);  // anonymous directory entry
             ftruncate(mfd, mlen);  // Allocate the pages in the file.
             if (frag) {
                 // Note: *addr does not exist yet, and figuring out a substitute

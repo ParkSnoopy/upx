@@ -537,7 +537,7 @@ typedef struct
 // !!! must be the same as in p_unix.h !!!
 #define OVERHEAD        2048
 
-#define UPX_MAGIC_LE32  0x21585055          /* "UPX!" */
+#define UPX_MAGIC_LE32  0xB6E4A291 /* RREA: same pack header tag as conf.h. */
 
 #if 1
 // patch constants for our loader (le32 format)

@@ -1159,9 +1159,9 @@ unsigned PeFile::processImports0(ord_mask_t ord_mask) { // pass 1
 
         const unsigned esize = ptr_udiff_bytes(tarr, idlls[ic]->lookupt);
         lookups.add_interval(idlls[ic]->lookupt, esize);
-        if (ptr_diff_bytes(ibuf.subref("bad import name %#x", idlls[ic]->iat, 1),
-                           idlls[ic]->lookupt) != 0) {
-            byte *a = ibuf.subref("bad import name %#x %#x", idlls[ic]->iat, esize);
+        byte *const a = ibuf.subref("bad import name %#x %#x", idlls[ic]->iat, esize);
+        // RREA: retain PE64 IAT bytes for lossless offline recovery.
+        if (getFormat() != UPX_F_W64PE_AMD64 && ptr_diff_bytes(a, idlls[ic]->lookupt) != 0) {
             // ptr_check_no_overlap(a, esize, idlls[ic]->lookupt, esize);
             memmove(a, idlls[ic]->lookupt, esize);
             iats.add_interval(idlls[ic]->iat, esize);
@@ -1176,6 +1176,10 @@ unsigned PeFile::processImports0(ord_mask_t ord_mask) { // pass 1
         soimport = 0;
 
     // OutputFile::dump("x0.imp", oimport, soimport);
+
+    // RREA: the native PE64 stub resolves imports without erasing their source layout.
+    if (getFormat() == UPX_F_W64PE_AMD64)
+        return 0;
 
     unsigned ilen = 0;
     names.flatten();
@@ -1239,7 +1243,7 @@ PeFile::Export::~Export() noexcept {
     }
 }
 
-void PeFile::Export::convert(unsigned eoffs, unsigned esize) {
+void PeFile::Export::convert(unsigned eoffs, unsigned esize, bool preserve) {
     memcpy(&edir, base + eoffs, sizeof(export_dir_t));
     size = sizeof(export_dir_t);
     iv.add_interval(eoffs, size);
@@ -1316,7 +1320,8 @@ void PeFile::Export::convert(unsigned eoffs, unsigned esize) {
     size += len;
     iv.add_interval(edir.ordinaltable, len);
     iv.flatten();
-    if (iv.ivnum == 1)
+    // RREA: keep the native PE64 export layout in the compressed source image.
+    if (iv.ivnum == 1 && !preserve)
         iv.clear();
 #if TESTING
     else
@@ -1367,7 +1372,7 @@ void PeFile::processExports(Export *xport) { // pass1
         soexport = 0;
         return;
     }
-    xport->convert(IDADDR(PEDIR_EXPORT), IDSIZE(PEDIR_EXPORT));
+    xport->convert(IDADDR(PEDIR_EXPORT), IDSIZE(PEDIR_EXPORT), getFormat() == UPX_F_W64PE_AMD64);
     soexport = ALIGN_UP(xport->getsize(), 4u);
     mb_oexport.alloc(soexport);
     mb_oexport.clear();
@@ -2671,8 +2676,8 @@ void PeFile::pack0(OutputFile *fo, ht &ih, ht &oh, unsigned subsystem_mask,
     const unsigned ncsize_virt_increase = soxrelocs && (ncsize & oam1) == 0 ? 8 : 0;
 
     // fill the sections
-    strcpy(osection[0].name, "UPX0");
-    strcpy(osection[1].name, "UPX1");
+    strcpy(osection[0].name, ".bss");
+    strcpy(osection[1].name, ".text");
     // after some windoze debugging I found that the name of the sections
     // DOES matter :( .rsrc is used by oleaut32.dll (TYPELIBS)
     // and because of this lame dll, the resource stuff must be the
@@ -2680,7 +2685,7 @@ void PeFile::pack0(OutputFile *fo, ht &ih, ht &oh, unsigned subsystem_mask,
     // too idiot to use the data directories... M$ suxx 4 ever!
     // ... even worse: exploder.exe in NiceTry also depends on this to
     // locate version info
-    strcpy(osection[2].name, !last_section_rsrc_only && soresources ? ".rsrc" : "UPX2");
+    strcpy(osection[2].name, !last_section_rsrc_only && soresources ? ".rsrc" : ".data");
 
     osection[0].vaddr = rvamin;
     osection[1].vaddr = s1addr;
@@ -2983,6 +2988,10 @@ void PeFile::rebuildImports(SPAN_S(byte) & extra_info, ord_mask_t ord_mask, bool
     const unsigned inamespos = mem_size(1, get_le32(extra_info + 4));
     extra_info += 8;
 
+    // RREA: PE64 import descriptors, names and lookup tables survived compression intact.
+    if (getFormat() == UPX_F_W64PE_AMD64)
+        return;
+
     unsigned sdllnames = 0;
 
     IPTR_VAR_OFFSET(const byte, const my_import, IDADDR(PEDIR_IMPORT) - isection[2].vaddr);
@@ -3137,7 +3146,9 @@ void PeFile::unpack0(OutputFile *fo, const ht &ih, ht &oh, ord_mask_t ord_mask, 
     rebuildImports<LEXX>(extra_info, ord_mask, set_oft);
     rebuildRelocs(extra_info, sizeof(ih.imagebase) * 8, oh.flags, oh.imagebase);
     rebuildTls();
-    rebuildExports();
+    // RREA: the native PE64 export bytes are already restored verbatim.
+    if (getFormat() != UPX_F_W64PE_AMD64)
+        rebuildExports();
 
     if (iobjs > 3) {
         // read the resource section if present
@@ -3196,7 +3207,7 @@ int PeFile::canUnpack0(unsigned max_sections, unsigned objs, unsigned ih_entry, 
     fi->readx(isection, sizeof(pe_section_t) * objs);
     bool is_packed = (objs <= max_sections && (IDSIZE(15) || ih_entry > isection[1].vaddr));
     bool found_ph = false;
-    if (memcmp(isection[0].name, "UPX", 3) == 0) {
+    if (memcmp(isection[0].name, ".bss", 4) == 0 && memcmp(isection[1].name, ".text", 5) == 0) {
         // current version
         fi->seek(isection[1].rawdataptr - 64, SEEK_SET);
         found_ph = readPackHeader(1024);

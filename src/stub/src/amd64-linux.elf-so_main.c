@@ -670,7 +670,7 @@ upx_so_main(  // returns &escape_hatch
     if (!hatch_p) {
         // All 64-bit Linux have memfd_create.
         // All non-ancient ones have MFD_EXEC.
-        int mfd = memfd_create(addr_string("upx"), MFD_EXEC);  // the file descriptor
+        int mfd = memfd_create(addr_string(""), MFD_EXEC);  // anonymous file descriptor
         write(mfd, hatch, sizeof(hatch));
         hatch_p = mmap(0, sizeof(hatch), PROT_READ|PROT_EXEC, MAP_SHARED, mfd, 0);
         close(mfd);

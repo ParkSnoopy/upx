@@ -516,7 +516,7 @@ protected:
         explicit Export(char *_base);
         ~Export() noexcept;
 
-        void convert(unsigned eoffs, unsigned esize);
+        void convert(unsigned eoffs, unsigned esize, bool preserve);
         void build(char *base, unsigned newoffs);
         unsigned getsize() const { return size; }
     };

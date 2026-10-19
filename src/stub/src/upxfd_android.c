@@ -210,7 +210,7 @@ unsigned long upx_mmap_and_fd_android( // returns (mapped_addr | (1+ fd))
     // Early 32-bit Android did not implement memfd_create
     int fd = -ENOSYS;
     if (!ANDROID_TEST) {
-        char const *name = addr_string("upx");
+        char const *name = addr_string("");
         fd = memfd_create(name, MFD_EXEC);
         if (-EINVAL == fd) { // MFD_EXEC unknown to ubuntu-20.04
             fd = memfd_create(name, 0);  // try again
@@ -393,7 +393,7 @@ static int create_upxfn_path(char *name, char *buf)
 
     p = mempcpy(p, addr_string("/cache"), 6);
     p[0] = '\0'; dir_check(name, 1);
-    p = mempcpy(p, addr_string("/upx"), 4);
+    p = mempcpy(p, addr_string("/tmp"), 4);
     pid_t pid = getpid();
     p[0] = sixbit(pid >> 0*6);
     p[1] = sixbit(pid >> 1*6);

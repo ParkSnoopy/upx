@@ -292,8 +292,8 @@ eof_n2b:
 
 #define arg2l esi
 // Create anonymous temporary file on mfd; like upxfd_create
-        push $'u'|('p'<<8)|('X'<<16)|(0<<24)  // MATCH_22
-        push %rsp; pop %arg1  // "upX"
+        push $0  // anonymous memfd name
+        push %rsp; pop %arg1
         push $MFD_EXEC; pop %arg2
 0: // try memfd_create
         movl $__NR_memfd_create,%eax; syscall
@@ -303,7 +303,7 @@ eof_n2b:
 no_memfd:  // so try /dev/shm
         hlt  // FIXME /dev/shm
 ok_memfd:
-        pop %rcx  // MATCH_22  discard "upX"
+        pop %rcx  // discard anonymous memfd name
         pop (%rsp)  // runtime PAGE_MASK replaces compiled-in default
         push %rax; pop %arg1  // mfd
         push %rsp; pop %arg2  // buffer

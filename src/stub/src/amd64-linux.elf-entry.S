@@ -336,8 +336,8 @@ D_XSIGSEGV= 1*NBPW
 #define arg2l esi
 #define arg3l edx
 // Create anonymous temporary file on mfd; like upxfd_create
-        push $'u'|('p'<<8)|('X'<<16)|(0<<24)  // MATCH_22
-        push %rsp; pop %arg1  // "upX"
+        push $0  // anonymous memfd name
+        push %rsp; pop %arg1
         push $MFD_EXEC; pop %arg2
 0: // try memfd_create
         movl $__NR_memfd_create,%eax; syscall
@@ -355,7 +355,7 @@ O_TMPFILE= 020000000  // 0x400000
         push $__NR_open; pop %rax; call sys_check
 ok_memfd:
         mov %rax,%r12  // mfd
-        pop %rcx  // MATCH_22  discard "upx"
+        pop %rcx  // discard anonymous memfd name
 
         lea sz_pack2(%rip),%rdi
         mov (%rdi),%ecx  // sz_pack2: length before stub
